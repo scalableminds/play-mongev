@@ -1,5 +1,14 @@
 ## Mongo evolution plugin for Play 2.2
 
+based on the sql evolution plugin from Typesafe Inc.
+
+This plugin helps to run evolutions on mongodb databases. It uses mongo scripts
+written in javascript to migrate existing data to a new format. The plugin 
+executes the scripts using the mongo console. It works the same way as the 
+integrated sql evolutions do.
+
+The evolution scripts need to be placed into `conf/evolutions/XXX.js`, where `XXX` denotes the evolution number (must be a valid integer). Evolutions will be executed in ascending order.
+
 ## Instalation
 
 The package is not yet published. I am waiting for sonatype to accept my 
