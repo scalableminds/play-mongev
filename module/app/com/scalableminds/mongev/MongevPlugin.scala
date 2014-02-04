@@ -373,7 +373,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
 
   private def evolutionsFilename(revision: Int): String = evolutionsDirectoryName + revision + ".js"
 
-  private def evolutionsResourceName(revision: Int): String = s"evolutions/$revision.json"
+  private def evolutionsResourceName(revision: Int): String = s"evolutions/$revision.js"
 
   /**
    * Reads the evolutions from the application.
