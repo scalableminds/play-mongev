@@ -14,6 +14,15 @@ The evolution scripts need to be placed into `conf/evolutions/XXX.js`, where `XX
 The package is not yet published. I am waiting for sonatype to accept my 
 publishing request.
 
+After adding the dependency, you need to load the plugin by adding this line to 
+your `conf/play.plugins` file:
+
+```
+100:com.scalableminds.mongev.MongevPlugin
+```
+
+Make sure the plugin gets loaded before your mongo db driver.
+
 ## Configuration
 
 <table>
