@@ -6,6 +6,16 @@ import scala.Some
 
 object Publish {
   object TargetRepository {
+    def scmio: Project.Initialize[Option[sbt.Resolver]] = version { (version: String) =>
+      val rootDir = "/srv/maven/"
+      val path =
+        if (version.trim.endsWith("SNAPSHOT"))
+          rootDir + "snapshots/"
+        else
+          rootDir + "releases/"
+      Some(Resolver.sftp("scm.io intern repo", "scm.io", 44144, path))
+    }
+
     def sonatype: Def.Initialize[Option[sbt.Resolver]] = version { (version: String) =>
       val nexus = "https://oss.sonatype.org/"
       if (version.trim.endsWith("SNAPSHOT"))
@@ -26,7 +36,7 @@ object Publish {
     startYear := Some(2014),
     description := "Play framework 2.x module to execute mongo DB evolutions via comand line",
     licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-    homepage := Some(url("http://mfizz.com/oss/play-module-twitter")),
+    homepage := Some(url("https://github.com/sclableminds/play-mongev")),
     scmInfo := Some(ScmInfo(url("https://github.com/sclableminds/play-mongev"), "https://github.com/scalableminds/play-mongev.git")),
     pomExtra := (
       <developers>
@@ -41,9 +51,9 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val version = "0.2-SNAPSHOT"
+  val version = "0.2.1"
 
   val name = "play-mongev"
 
-  val mongev = play.Project(name, version, Seq()).settings(Publish.settings:_*)
+  val mongev = play.Project(name, version, Seq(), settings = Publish.settings)
 }
