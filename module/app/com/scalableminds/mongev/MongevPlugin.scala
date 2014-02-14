@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 import play.core.HandleWebCommandSupport
 import play.api.libs.json._
 import play.api.libs.Files.TemporaryFile
+import org.slf4j.LoggerFactory
 
 /**
  * An DB evolution - database changes associated with a software version.
@@ -77,7 +78,7 @@ private[mongev] trait EvolutionHelperScripts {
 
   val allEvolutionsQuery = evolutionsQuery("")
 
-  val unfinishedEvolutionsQuery = evolutionsQuery("""{"state" : {$in : ["applying_up", "applying_down"]}}""")
+  val unfinishedEvolutionsQuery = evolutionsQuery( """{"state" : {$in : ["applying_up", "applying_down"]}}""")
 
   def evolutionsQuery(query: String) =
     s"""
@@ -149,18 +150,44 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
 
   def mongoCmd: String
 
+  class StringListLogger(var messages: List[String] = Nil, var errors: List[String] = Nil) extends ProcessLogger {
+
+    def out(s: => String) {
+      messages ::= s
+    }
+
+    def err(s: => String) {
+      errors ::= s
+    }
+
+    def buffer[T](f: => T): T = f
+  }
+
   def execute(cmd: String): Option[JsValue] = {
     val input = TemporaryFile("mongo-script", ".js")
 
     Files.writeFile(input.file, cmd)
     val jsPath = input.file.getAbsolutePath
 
-    val result = Process(s"$mongoCmd --quiet $jsPath") !!
+    val processLogger = new StringListLogger
+    val result = Process(s"$mongoCmd --quiet $jsPath") ! (processLogger)
 
-    if (!result.trim.isEmpty) {
-      Some(Json.parse(flattenObjectIds(result)))
-    } else {
-      None
+    val output = processLogger.messages.reverse.mkString("\n")
+
+    result match {
+      case 0 if output != "" =>
+        val json = flattenObjectIds(output)
+        try {
+          Some(Json.parse(json))
+        } catch {
+          case e: com.fasterxml.jackson.core.JsonParseException =>
+            logger.error("Failed to parse json: " + json)
+            throw InvalidDatabaseEvolutionScript(json, result, "Failed to parse json result.")
+        }
+      case 0 =>
+        None
+      case errorCode =>
+        throw InvalidDatabaseEvolutionScript(cmd, errorCode, processLogger.errors.reverse.mkString("\n"))
     }
   }
 
@@ -182,8 +209,8 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
   def applyFor(path: java.io.File = new java.io.File(".")) {
     Play.current.plugin[MongevPlugin] map {
       plugin =>
-        val script = evolutionScript( path, plugin.getClass.getClassLoader)
-        applyScript( script)
+        val script = evolutionScript(path, plugin.getClass.getClassLoader)
+        applyScript(script)
     }
   }
 
@@ -213,8 +240,8 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
    * @param revision the revision to mark as resolved
    */
   def resolve(revision: Int) {
-    execute( setAsApplied(revision, "applying_up"))
-    execute( removeAllInState(revision, "applying_down"))
+    execute(setAsApplied(revision, "applying_up"))
+    execute(removeAllInState(revision, "applying_down"))
   }
 
   /**
@@ -223,7 +250,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
    * @throws an error if the database is in an inconsistent state
    */
   def checkEvolutionsState() {
-    execute( unfinishedEvolutionsQuery) map {
+    execute(unfinishedEvolutionsQuery) map {
       case JsArray((problem: JsObject) +: _) =>
         val revision = (problem \ "revision").as[Int]
         val state = (problem \ "state").as[String]
@@ -260,20 +287,20 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
           "db_down" -> e.db_down,
           "state" -> "applying_up",
           "last_problem" -> "")
-        execute( insert(json))
+        execute(insert(json))
       case DownScript(e, _) =>
-        execute( updateState(e.revision, "applying_down"))
+        execute(updateState(e.revision, "applying_down"))
     }
 
     def logAfter(s: Script) = s match {
       case UpScript(e, _) =>
-        execute( updateState(e.revision, "applied"))
+        execute(updateState(e.revision, "applied"))
       case DownScript(e, _) =>
-        execute( remove(e.revision))
+        execute(remove(e.revision))
     }
 
     def updateLastProblem(message: String, revision: Int) =
-      execute( setLastProblem(revision, message))
+      execute(setLastProblem(revision, message))
 
     checkEvolutionsState()
 
@@ -285,7 +312,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
           applying = s.evolution.revision
           logBefore(s)
           // Execute script
-          execute( s.script)
+          execute(s.script)
           logAfter(s)
       }
     } catch {
@@ -359,7 +386,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
 
     checkEvolutionsState()
 
-    execute( allEvolutionsQuery).map {
+    execute(allEvolutionsQuery).map {
       value: JsValue =>
 
         value.validate(Reads.list[Evolution]) match {
@@ -438,7 +465,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
 /**
  * Play Evolutions plugin.
  */
-class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport with MongevLogger with Evolutions{
+class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport with MongevLogger with Evolutions {
 
 
   /**
@@ -446,7 +473,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
    */
   lazy val mongoCmd = app.configuration.getString("mongodb.evolution.mongoCmd").getOrElse(
     throw new Exception("There is no mongodb.evolution.mongoCmd configuration available. " +
-    "You need to declare informations about your mongo cmd in your configuration. E.g. \"mongo localhost:3232/myApp\""))
+      "You need to declare informations about your mongo cmd in your configuration. E.g. \"mongo localhost:3232/myApp\""))
 
   /**
    * Is this plugin enabled.
@@ -466,13 +493,13 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
    */
   override def onStart() {
     withLock {
-      val script = evolutionScript( app.path, app.classloader)
+      val script = evolutionScript(app.path, app.classloader)
       val hasDown = script.exists(_.isInstanceOf[DownScript])
 
       if (!script.isEmpty) {
         app.mode match {
-          case Mode.Test => applyScript( script)
-          case Mode.Dev => applyScript( script)
+          case Mode.Test => applyScript(script)
+          case Mode.Dev => applyScript(script)
           case Mode.Prod if applyProdEvolutions && (applyDownEvolutions || !hasDown) => applyScript(script)
           case Mode.Prod if applyProdEvolutions && hasDown => {
             logger.warn("Your production database needs evolutions, including downs! \n\n" + toHumanReadableScript(script))
@@ -497,10 +524,10 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
 
   def withLock(block: => Unit) {
 
-    def unlock() = execute( releaseLock)
+    def unlock() = execute(releaseLock)
 
     if (app.configuration.getBoolean("mongodb.evolution.useLocks").getOrElse(false)) {
-      execute( acquireLock) match {
+      execute(acquireLock) match {
         case Some(o: JsObject) =>
           val lock = (o \ "value" \ "lock").as[Int]
           if (lock == 1) {
@@ -534,7 +561,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
 
       case applyEvolutions() => {
         Some {
-          val script = evolutionScript( app.path, app.classloader)
+          val script = evolutionScript(app.path, app.classloader)
           applyScript(script)
           sbtLink.forceReload()
           play.api.mvc.Results.Redirect(redirectUrl)
@@ -560,9 +587,9 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
 /**
  * Can be used to run off-line evolutions, i.e. outside a running application.
  */
-object OfflineEvolutions extends MongevLogger{
+object OfflineEvolutions extends MongevLogger {
 
-  def Evolutions(appPath: File) = new Evolutions{
+  def Evolutions(appPath: File) = new Evolutions {
     def mongoCmd = Configuration.load(appPath).getString("mongodb.evolution.mongoCmd").get
   }
 
@@ -576,7 +603,7 @@ object OfflineEvolutions extends MongevLogger{
    */
   def applyScript(appPath: File, classloader: ClassLoader) {
     val ev = Evolutions(appPath)
-    val script = ev.evolutionScript( appPath, classloader)
+    val script = ev.evolutionScript(appPath, classloader)
     if (!isTest) {
       logger.warn("Applying evolution script for database:\n\n" + ev.toHumanReadableScript(script))
     }
@@ -650,5 +677,28 @@ case class InconsistentDatabase(script: String, error: String, rev: Int) extends
 
   }.mkString
 
+}
+
+/**
+ * Exception thrown when the database evolution is invalid.
+ *
+ * @param script the script that was about to get run
+ */
+case class InvalidDatabaseEvolutionScript(script: String, exitCode: Int, error: String) extends PlayException.RichDescription(
+  "Evolution failed!",
+  s"Tried to run an evolution, but got the following return value: $exitCode") {
+
+  def subTitle = "This MongoDB script produced an error while running on the db:"
+
+  def content = script
+
+  def htmlDescription = {
+
+    <span>Error: "
+      {error}
+      ".</span>
+      <span>Try to fix the issue!</span>
+
+  }.mkString
 }
 

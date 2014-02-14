@@ -27,7 +27,7 @@ object Publish {
 
   lazy val settings = Seq(
     publishMavenStyle := true,
-    publishTo <<= TargetRepository.sonatype,
+    publishTo <<= TargetRepository.scmio,
     publishArtifact in Test := false,
     pomIncludeRepository := { _ => false },
     organization := "com.scalableminds",
@@ -51,7 +51,7 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val version = "0.2.1"
+  val version = "0.2.4"
 
   val name = "play-mongev"
 
