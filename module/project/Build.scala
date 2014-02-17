@@ -41,8 +41,10 @@ object Publish {
     pomExtra := (
       <developers>
         <developer>
-          <name>Tom Bocklisch (github: tmbo)</name>
+          <id>tmbo</id>
+          <name>Tom Bocklisch</name>
           <email>tom.bocklisch@scalableminds.com</email>
+          <url>http://github.com/tmbo</url>
         </developer>
       </developers>
     )

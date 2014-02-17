@@ -1,5 +1,13 @@
 /*
- * Copyright (C) 2009-2013 scalable minds UG & Co. KG <http://www.scalableminds.com>
+ * Copyright (C) 2009-2013 Typesafe Inc. <http://www.typesafe.com>
+ */
+/*
+ * Copyright (C) 2013-2014 scalable minds UG & Co. KG <http://www.scm.io>
+ */
+
+/**
+ * This software is partly based on the playframework's play-jdbc project (https://github.com/playframework/playframework/blob/master/framework/src/play-jdbc)
+ * and part of the code used here has its origin in the mentioned project.
  */
 
 package com.scalableminds.mongev
