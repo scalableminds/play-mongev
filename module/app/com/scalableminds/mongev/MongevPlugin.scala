@@ -2,7 +2,7 @@
  * Copyright (C) 2009-2013 Typesafe Inc. <http://www.typesafe.com>
  */
 /*
- * Copyright (C) 2013-2014 scalable minds UG & Co. KG <http://www.scm.io>
+ * Copyright (C) 2013-2014 scalable minds UG (haftungsbeschränkt) & Co. KG <http://www.scm.io>
  */
 
 /**
