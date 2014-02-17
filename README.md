@@ -11,8 +11,13 @@ The evolution scripts need to be placed into `conf/evolutions/XXX.js`, where `XX
 
 ## Instalation
 
-The package is not yet published. I am waiting for sonatype to accept my 
-publishing request.
+The package is published to sonatype and should get synced to maven central.
+
+You need to add the package as a dependency:
+
+```
+libraryDependencies += "com.scalableminds" %% "play-mongev" % "0.2.5"
+```
 
 After adding the dependency, you need to load the plugin by adding this line to 
 your `conf/play.plugins` file:
