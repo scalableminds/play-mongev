@@ -205,7 +205,7 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
       case 0 =>
         None
       case errorCode =>
-        throw InvalidDatabaseEvolutionScript(cmd, errorCode, processLogger.errors.reverse.mkString("\n"))
+        throw InvalidDatabaseEvolutionScript(cmd, errorCode, output + "\n" + processLogger.errors.reverse.mkString("\n"))
     }
   }
 
@@ -220,7 +220,8 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
  * Defines Evolutions utilities functions.
  */
 trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with MongevLogger {
-
+  def compareHashes: Boolean
+  
   /**
    * Apply pending evolutions for the given DB.
    */
@@ -329,7 +330,14 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
         s =>
           applying = s.evolution.revision
           logBefore(s)
+          
+          val scriptType = s match {
+            case UpScript(e, _) => "up"
+            case DownScript(e, _) => "down"
+          }
+          
           // Execute script
+          logger.debug(s"""Applying $scriptType for revision $applying """)
           execute(s.script)
           logAfter(s)
       }
@@ -368,10 +376,12 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
    */
   def evolutionScript(path: File, applicationClassloader: ClassLoader): Seq[Product with Serializable with Script] = {
     val application = applicationEvolutions(path, applicationClassloader)
-
+    logger.debug("application evolutions: " + application.map(_.revision).mkString(" "))
+    
     Option(application).filterNot(_.isEmpty).map {
       case application =>
         val database = databaseEvolutions()
+        logger.debug("database evolutions: " + database.map(_.revision).mkString(" "))
 
         val (nonConflictingDowns, dRest) = database.span(e => !application.headOption.exists(e.revision <= _.revision))
         val (nonConflictingUps, uRest) = application.span(e => !database.headOption.exists(_.revision >= e.revision))
@@ -380,7 +390,9 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
 
         val ups = (nonConflictingUps ++ conflictingUps).reverse.map(e => UpScript(e, e.db_up))
         val downs = (nonConflictingDowns ++ conflictingDowns).map(e => DownScript(e, e.db_down))
-
+        logger.debug("Up scripts: " + ups.map(_.evolution.revision).mkString(" "))
+        logger.debug("Down scripts: " + downs.map(_.evolution.revision).mkString(" "))
+        
         downs ++ ups
     }.getOrElse(Nil)
   }
@@ -394,7 +406,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
    * @return the downs and ups to run to have the db synced to the current stage
    */
   def conflicts(downRest: Seq[Evolution], upRest: Seq[Evolution]) = downRest.zip(upRest).reverse.dropWhile {
-    case (down, up) => down.hash == up.hash
+    case (down, up) => (!compareHashes) || (down.hash == up.hash)
   }.reverse.unzip
 
   /**
@@ -503,7 +515,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
   override lazy val enabled = app.configuration.getBoolean("mongodb.evolution.enabled").getOrElse(false)
 
   lazy val applyDownEvolutions = app.configuration.getBoolean("mongodb.evolution.applyDownEvolutions").getOrElse(false)
-
+  lazy val compareHashes = app.configuration.getBoolean("mongodb.evolution.compareHashes").getOrElse(true)
   lazy val applyProdEvolutions = app.configuration.getBoolean("mongodb.evolution.applyProdEvolutions").getOrElse(false)
 
   /**
@@ -608,6 +620,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
 object OfflineEvolutions extends MongevLogger {
 
   def Evolutions(appPath: File) = new Evolutions {
+    val compareHashes = false
     def mongoCmd = Configuration.load(appPath).getString("mongodb.evolution.mongoCmd").get
   }
 
