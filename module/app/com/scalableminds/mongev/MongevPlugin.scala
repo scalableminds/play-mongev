@@ -171,6 +171,16 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
     def buffer[T](f: => T): T = f
   }
 
+  private def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
+
+  private def startProcess(app: String, param: String) = {
+    val cmd = app + " " + param
+    if(isWindowsSystem)
+      Process( "cmd" :: "/c" :: cmd :: Nil )
+    else
+      Process( cmd :: Nil )
+  }
+
   def execute(cmd: String): Option[JsValue] = {
     val input = TemporaryFile("mongo-script", ".js")
 
@@ -178,7 +188,7 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
     val jsPath = input.file.getAbsolutePath
 
     val processLogger = new StringListLogger
-    val result = Process(s"$mongoCmd --quiet $jsPath") ! (processLogger)
+    val result = startProcess(mongoCmd, s"--quiet $jsPath") ! (processLogger)
 
     val output = processLogger.messages.reverse.mkString("\n")
 
