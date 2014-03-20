@@ -16,7 +16,7 @@ The package is published to sonatype and should get synced to maven central.
 You need to add the package as a dependency:
 
 ```
-libraryDependencies += "com.scalableminds" %% "play-mongev" % "0.2.7"
+libraryDependencies += "com.scalableminds" %% "play-mongev" % "0.2.8"
 ```
 
 After adding the dependency, you need to load the plugin by adding this line to 

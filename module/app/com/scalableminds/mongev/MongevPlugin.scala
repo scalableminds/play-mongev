@@ -171,14 +171,15 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
     def buffer[T](f: => T): T = f
   }
 
-  private def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
+  private def isWindowsSystem = 
+    System.getProperty("os.name").startsWith("Windows")
 
   private def startProcess(app: String, param: String) = {
     val cmd = app + " " + param
     if(isWindowsSystem)
-      Process( "cmd" :: "/c" :: cmd :: Nil )
+      Process("cmd" :: "/c" :: cmd :: Nil)
     else
-      Process( cmd :: Nil )
+      Process(cmd)
   }
 
   def execute(cmd: String): Option[JsValue] = {

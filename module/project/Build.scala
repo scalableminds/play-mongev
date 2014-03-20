@@ -34,7 +34,7 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val version = "0.2.7"
+  val version = "0.2.8"
 
   val name = "play-mongev"
 
