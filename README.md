@@ -9,7 +9,7 @@ integrated sql evolutions do.
 
 The evolution scripts need to be placed into `conf/evolutions/XXX.js`, where `XXX` denotes the evolution number (must be a valid integer). Evolutions will be executed in ascending order.
 
-## Instalation
+## Installation
 
 The package is published to sonatype and should get synced to maven central.
 
