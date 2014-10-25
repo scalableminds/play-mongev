@@ -13,10 +13,10 @@
 package com.scalableminds.mongev
 
 import java.io._
-import scalax.io.JavaConverters._
 import play.api._
 import play.api.libs._
 import play.api.libs.Codecs._
+import scala.io.Source
 import scala.util.control.NonFatal
 import play.core.HandleWebCommandSupport
 import play.api.libs.json._
@@ -267,7 +267,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
   /**
    * Checks the evolutions state.
    *
-   * @throws an error if the database is in an inconsistent state
+   * @throws InconsistentDatabase an error if the database is in an inconsistent state
    */
   def checkEvolutionsState() {
     execute(unfinishedEvolutionsQuery) map {
@@ -466,7 +466,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
           Option(applicationClassloader.getResourceAsStream(evolutionsResourceName(revision)))
         }.map {
           stream =>
-            (revision + 1, (revision, stream.asInput.string))
+            (revision + 1, (revision, Source.fromInputStream(stream).mkString))
         }
     }.sortBy(_._1).map {
       case (revision, script) => {
@@ -581,7 +581,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
       block
   }
 
-  def handleWebCommand(request: play.api.mvc.RequestHeader, sbtLink: play.core.SBTLink, path: java.io.File): Option[play.api.mvc.SimpleResult] = {
+  def handleWebCommand(request: play.api.mvc.RequestHeader, buildLink: play.core.BuildLink, path: java.io.File): Option[play.api.mvc.Result] = {
 
     val applyEvolutions = """/@evolutions/apply""".r
     val resolveEvolutions = """/@evolutions/resolve/([0-9]+)""".r
@@ -594,7 +594,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
         Some {
           val script = evolutionScript(app.path, app.classloader)
           applyScript(script)
-          sbtLink.forceReload()
+          buildLink.forceReload()
           play.api.mvc.Results.Redirect(redirectUrl)
         }
       }
@@ -602,7 +602,7 @@ class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport
       case resolveEvolutions(rev) => {
         Some {
           resolve(rev.toInt)
-          sbtLink.forceReload()
+          buildLink.forceReload()
           play.api.mvc.Results.Redirect(redirectUrl)
         }
       }

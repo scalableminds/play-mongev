@@ -1,6 +1,7 @@
 import sbt._
 import sbt.Keys._
-import play.Project._
+import play.Play.autoImport._
+import PlayKeys._
 import com.typesafe.config._
 import scala.Some
 import xerial.sbt.Sonatype.SonatypeKeys._
@@ -34,9 +35,13 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val version = "0.2.8"
+  val appVersion = "0.3.0"
 
-  val name = "play-mongev"
-
-  val mongev = play.Project(name, version, Seq(), settings = xerial.sbt.Sonatype.sonatypeSettings ++ Publish.settings)
+  val mongev = Project("play-mongev", file("."))
+    .enablePlugins(play.PlayScala)
+    .settings((xerial.sbt.Sonatype.sonatypeSettings ++ Publish.settings):_*)
+    .settings(
+      scalaVersion := "2.11.2",
+      version := appVersion
+  )
 }
