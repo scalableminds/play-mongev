@@ -1,4 +1,4 @@
-## Mongo evolution plugin for Play 2.2
+## Mongo evolution plugin for Play 2.3
 
 based on the sql evolution plugin from Typesafe Inc.
 
@@ -16,7 +16,7 @@ The package is published to sonatype and should get synced to maven central.
 You need to add the package as a dependency:
 
 ```
-libraryDependencies += "com.scalableminds" %% "play-mongev" % "0.2.8"
+libraryDependencies += "com.scalableminds" %% "play-mongev" % "0.3.0"
 ```
 
 After adding the dependency, you need to load the plugin by adding this line to 
