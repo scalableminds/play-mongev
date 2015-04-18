@@ -15,6 +15,7 @@ object ApplicationBuild extends Build {
 
   val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(
     version := appVersion, 
+    scalaVersion := "2.11.2",
     libraryDependencies ++= dependencies,
     organization := "com.scalableminds",
     organizationName := "scalable minds UG (haftungsbeschränkt) & Co. KG",
