@@ -194,7 +194,7 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
     val output = processLogger.messages.reverse.mkString("\n")
 
     result match {
-      case 0 if output != "" =>
+      case 0 if output != "" && !output.contains("I CONTROL  Hotfix KB2731284 or later update is installed, no need to zero-out data files") => //fix mongodb 3.3 on windows 7
         val json = flattenObjectIds(output)
         try {
           Some(Json.parse(json))
