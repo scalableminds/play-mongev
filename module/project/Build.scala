@@ -15,7 +15,7 @@ object Publish {
     organizationName := "scalable minds UG (haftungsbeschränkt) & Co. KG",
     organizationHomepage := Some(url("http://scalableminds.com")),
     startYear := Some(2014),
-    profileName := "com.scalableminds",
+    sonatypeProfileName := "com.scalableminds",
     description := "Play framework 2.x module to execute mongo DB evolutions via comand line",
     licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
     homepage := Some(url("https://github.com/sclableminds/play-mongev")),
@@ -35,7 +35,7 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val appVersion = "0.3.0"
+  val appVersion = "0.3.1"
 
   val mongev = Project("play-mongev", file("."))
     .enablePlugins(play.PlayScala)
