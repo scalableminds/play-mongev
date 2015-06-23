@@ -466,7 +466,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
           Option(applicationClassloader.getResourceAsStream(evolutionsResourceName(revision)))
         }.map {
           stream =>
-            (revision + 1, (revision, Source.fromInputStream(stream).mkString))
+            (revision + 1, (revision, Source.fromInputStream(stream)("UTF-8").mkString))
         }
     }.sortBy(_._1).map {
       case (revision, script) => {
