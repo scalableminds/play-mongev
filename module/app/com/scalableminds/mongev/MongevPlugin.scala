@@ -14,14 +14,17 @@ package com.scalableminds.mongev
 
 import java.io._
 import play.api._
-import play.api.libs._
 import play.api.libs.Codecs._
+import play.api.libs.Collections
 import scala.io.Source
 import scala.util.control.NonFatal
 import play.core.HandleWebCommandSupport
 import play.api.libs.json._
 import play.api.libs.Files.TemporaryFile
 import org.slf4j.LoggerFactory
+import java.nio.file.Files
+
+import javax.inject.Inject
 
 /**
  * An DB evolution - database changes associated with a software version.
@@ -183,10 +186,10 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
   }
 
   def execute(cmd: String): Option[JsValue] = {
-    val input = TemporaryFile("mongo-script", ".js")
+    val input = Files.createTempFile("mongo-script", ".js")
 
-    Files.writeFile(input.file, cmd)
-    val jsPath = input.file.getAbsolutePath
+    Files.write(input, cmd.getBytes)
+    val jsPath = input.toAbsolutePath.toString
 
     val processLogger = new StringListLogger
     val result = startProcess(mongoCmd, s"--quiet $jsPath") ! (processLogger)
@@ -238,20 +241,24 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
    * Updates a local (file-based) evolution script.
    */
   def updateEvolutionScript(revision: Int = 1, comment: String = "Generated", ups: String, downs: String)(implicit application: Application) {
-    import play.api.libs._
 
-    val evolutions = application.getFile(evolutionsFilename(revision));
-    Files.createDirectory(application.getFile(evolutionsDirectoryName));
-    Files.writeFileIfChanged(evolutions,
-      """|// --- %s
-        |
-        |// --- !Ups
-        |%s
-        |
-        |// --- !Downs
-        |%s
-        |
-        | """.stripMargin.format(comment, ups, downs));
+    val evolutions = application.path.toPath.resolve(evolutionsFilename(revision))
+    Files.createDirectory(application.path.toPath.resolve(evolutionsDirectoryName))
+
+    val content = Option(evolutions).filter(_.toFile.exists()).map(p => new String(Files.readAllBytes(p))).getOrElse("")
+    
+    val evolutionContent = """|// --- %s
+                              |
+                              |// --- !Ups
+                              |%s
+                              |
+                              |// --- !Downs
+                              |%s
+                              |
+                              | """.stripMargin.format(comment, ups, downs)
+    if (evolutionContent != content) {
+      Files.write(evolutions, evolutionContent.getBytes)
+    }
   }
 
   /**
@@ -496,7 +503,7 @@ trait Evolutions extends MongoScriptExecutor with EvolutionHelperScripts with Mo
 /**
  * Play Evolutions plugin.
  */
-class MongevPlugin(app: Application) extends Plugin with HandleWebCommandSupport with MongevLogger with Evolutions {
+class MongevPlugin @Inject() (implicit app: Application) extends Plugin with HandleWebCommandSupport with MongevLogger with Evolutions {
 
 
   /**

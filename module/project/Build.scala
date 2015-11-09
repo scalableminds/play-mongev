@@ -35,13 +35,13 @@ object Publish {
 
 object ApplicationBuild extends Build {
 
-  val appVersion = "0.3.2"
+  val appVersion = "0.4.1"
 
   val mongev = Project("play-mongev", file("."))
     .enablePlugins(play.PlayScala)
     .settings((xerial.sbt.Sonatype.sonatypeSettings ++ Publish.settings):_*)
     .settings(
-      scalaVersion := "2.11.2",
+      scalaVersion := "2.11.7",
       version := appVersion
   )
 }

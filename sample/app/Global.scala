@@ -3,6 +3,7 @@ import play.api._
 import play.modules.reactivemongo.json.collection.JSONCollection
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.json._
 
 object Global extends GlobalSettings{
 

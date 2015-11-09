@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import play.modules.reactivemongo._
 import reactivemongo.api._
 import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.json._
 
 case class Message(text: String)
 
