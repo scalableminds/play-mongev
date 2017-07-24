@@ -183,13 +183,8 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
   }
 
   def execute(cmd: String): Option[JsValue] = {
-    val input = TemporaryFile("mongo-script", ".js")
-
-    Files.writeFile(input.file, cmd)
-    val jsPath = input.file.getAbsolutePath
-
     val processLogger = new StringListLogger
-    val result = startProcess(mongoCmd, s"--quiet $jsPath") ! (processLogger)
+    val result = startProcess(mongoCmd, s"--quiet <<EOFCMDBBQ\n$cmd\nEOFCMDBBQ") ! (processLogger)
 
     val output = processLogger.messages.reverse.mkString("\n")
 
