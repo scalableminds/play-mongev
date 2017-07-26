@@ -184,7 +184,9 @@ private[mongev] trait MongoScriptExecutor extends MongevLogger {
 
   def execute(cmd: String): Option[JsValue] = {
     val processLogger = new StringListLogger
-    val result = startProcess(mongoCmd, s"--quiet <<EOFCMDBBQ\n$cmd\nEOFCMDBBQ") ! (processLogger)
+
+    val stdin = new ByteArrayInputStream(cmd.getBytes("UTF-8"))
+    val result = (startProcess(mongoCmd, "--quiet") #< stdin) ! (processLogger)
 
     val output = processLogger.messages.reverse.mkString("\n")
 
