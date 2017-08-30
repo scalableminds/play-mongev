@@ -525,6 +525,7 @@ class MongevPlugin @Inject() (implicit app: Application) extends Plugin with Han
   lazy val applyDownEvolutions = app.configuration.getBoolean("mongodb.evolution.applyDownEvolutions").getOrElse(false)
   lazy val compareHashes = app.configuration.getBoolean("mongodb.evolution.compareHashes").getOrElse(true)
   lazy val applyProdEvolutions = app.configuration.getBoolean("mongodb.evolution.applyProdEvolutions").getOrElse(false)
+  lazy val applyTestEvolutions = app.configuration.getBoolean("mongodb.evolution.applyTestEvolutions").getOrElse(true)
 
   /**
    * Checks the evolutions state.
@@ -536,7 +537,7 @@ class MongevPlugin @Inject() (implicit app: Application) extends Plugin with Han
 
       if (!script.isEmpty) {
         app.mode match {
-          case Mode.Test => applyScript(script)
+          case Mode.Test if applyTestEvolutions => applyScript(script)
           case Mode.Dev => applyScript(script)
           case Mode.Prod if applyProdEvolutions && (applyDownEvolutions || !hasDown) => applyScript(script)
           case Mode.Prod if applyProdEvolutions && hasDown => {
